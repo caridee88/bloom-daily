@@ -1,1 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Bloom Daily</title>
+<style>
+:root{--ice:#dcecf7;--ice2:#bcd9ee;--cream:#fffaf2;--peach:#f7b7a3;--lav:#e6dcf5;--ink:#4a4a5e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:-apple-system,"PingFang TC",sans-serif}
+#app{max-width:430px;margin:0 auto;padding:16px 14px 96px}
+h2{margin:6px 0 12px;text-align:center}
+.card{background:#fff;border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px #bcd9ee55}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bar{height:10px;border-radius:9px;background:var(--ice);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--peach)}
+button{border:0;border-radius:14px;padding:10px 14px;background:var(--ice2);color:var(--ink);font-size:15px}
+button.main{background:var(--peach)}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--ice2);border-radius:12px;margin:5px 0;font-size:16px;background:var(--cream)}
+.done{background:var(--lav)}
+.chip{display:inline-block;padding:6px 12px;border-radius:14px;background:var(--ice);margin:3px}
+.chip.on{background:var(--peach)}
+.c{text-align:center}.sm{font-size:13px;opacity:.7}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:#fffffff0;padding:8px 6px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--ice)}
+nav div{display:flex;max-width:430px;width:100%}
+nav button{flex:1;background:none;font-size:12px;padding:6px 0}
+nav button.on{background:var(--lav)}
+nav b{display:block;font-size:20px}
+</style></head><body>
+<div id="app"></div>
+<nav><div id="nav"></div></nav>
+<script>
+window.onerror=function(m,s,l){document.getElementById('app').innerHTML='<pre style="padding:20px;white-space:pre-wrap;color:red">錯誤：'+m+' (行 '+l+')</pre>'};
+const HABITS=[
+{id:'exercise',n:'運動',e:'🧘🏻‍♀️',xp:20,f:'exercise'},
+{id:'english',n:'學英文',e:'📖',xp:15,f:'min'},
+{id:'japanese',n:'學日文',e:'🍡',xp:15,f:'min'},
+{id:'sleep',n:'睡眠品質',e:'🌙',xp:10,f:'sleep'},
+{id:'taxi',n:'今日沒有坐計程車',e:'🚕',xp:10},
+{id:'tea',n:'今日沒有買手搖',e:'🧋',xp:10},
+{id:'book',n:'看書',e:'📚',xp:15,f:'book'}];
+const QUOTES=[
+{zh:'慢慢來，花也是一天一天開的。',en:'Take your time. Flowers bloom one day at a time.',ja:'ゆっくりでいいよ。花も一日ずつ咲くから。'},
+{zh:'今天的你，已經很棒了。',en:'You are doing great today.',ja:'今日のあなたはもう十分すばらしいよ。'},
+{zh:'小小的進步，也值得被慶祝。',en:'Even small progress deserves a celebration.',ja:'小さな一歩も、お祝いする価値があるよ。'},
+{zh:'深呼吸，一切都會慢慢變好。',en:'Breathe in. Things will slowly get better.',ja:'深呼吸して。きっと少しずつ良くなるよ。'},
+{zh:'做自己，就是最好的風景。',en:'Being yourself is the best scenery.',ja:'あなたらしさが、いちばんの景色だよ。'}];
+const PLACES=[
+{id:'santorini',name:'聖托里尼',country:'希臘',lat:36.39,lon:25.46,story:'白色屋舍沿著火山破火山口的懸崖層層排列，是愛琴海最具代表性的風景之一。',fact:'島嶼的形狀來自史前一次大規模火山噴發。'},
+{id:'fushimi',name:'伏見稻荷大社',country:'日本',lat:34.967,lon:135.773,story:'位於京都，以綿延山路上的朱紅鳥居聞名，自古是祈求商業與豐收的神社。',fact:'山徑上的鳥居數量以千計，多由企業與個人奉納。'},
+{id:'machu',name:'馬丘比丘',country:'秘魯',lat:-13.163,lon:-72.545,story:'15 世紀印加帝國興建的山城，坐落於安地斯山脈高處，石造建築精密。',fact:'許多石塊切割得相當精準，不使用灰漿也能緊密相接。'},
+{id:'louise',name:'路易斯湖',country:'加拿大',lat:51.417,lon:-116.218,story:'位於洛磯山脈班夫國家公園，被冰川環繞，湖水呈現夢幻的青綠色。',fact:'湖水顏色來自冰川磨出的細微岩粉散射光線。'},
+{id:'petra',name:'佩特拉',country:'約旦',lat:30.329,lon:35.444,story:'納巴泰人的古城，建築直接鑿刻在粉紅色砂岩峭壁上。',fact:'它曾是古代香料貿易路線上的重要城市。'}];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S;
+try{S=JSON.parse(localStorage.getItem('bloom')||'null')}catch(_){S=null}
+S=S||{days:{},books:[],favQ:[],places:[],lastQ:null,lastP:null};
+const save=()=>{try{localStorage.setItem('bloom',JSON.stringify(S))}catch(_){}};
+const key=d=>{d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const rd=k=>S.days[k||key()]||{};
+const wr=()=>S.days[key()]||(S.days[key()]={});
+const count=k=>HABITS.filter(h=>rd(k)[h.id]).length;
+const xp=k=>HABITS.filter(h=>rd(k)[h.id]).reduce((a,h)=>a+h.xp,0);
+let tab='today',open=null,newBook=false,shelf='reading',finishing=null,slow=false;
+
+function render(){
+ const T=[['today','♡','今日'],['stats','▥','統計'],['quote','💌','話語'],['world','🌍','世界'],['shelf','📚','書櫃']];
+ $('#nav').innerHTML=T.map(t=>'<button class="'+(tab==t[0]?'on':'')+'" data-a="tab" data-v="'+t[0]+'"><b>'+t[1]+'</b>'+t[2]+'</button>').join('');
+ const views={today:vToday,stats:vStats,quote:vQuote,world:vWorld,shelf:vShelf};
+ $('#app').innerHTML=views[tab]();
+}
+
+/* ---------- 今日 ---------- */
+function form(h){
+ const d=rd()[h.id]||{};
+ if(h.f=='exercise'){
+  const ty=d.types||[];
+  const chips=['瑜珈','跳舞','其他'].map(t=>'<label class="chip"><input type="checkbox" class="ex" value="'+t+'" '+(ty.includes(t)?'checked':'')+' style="width:auto;margin:0 4px 0 0">'+t+'</label>').join('');
+  return '<div>'+chips+'<input id="exo" placeholder="其他運動名稱" value="'+esc(d.other||'')+'"><input id="min" type="number" inputmode="numeric" placeholder="運動分鐘數" value="'+(d.min||'')+'"></div>';
+ }
+ if(h.f=='min')return '<input id="min" type="number" inputmode="numeric" placeholder="今日學習分鐘數" value="'+(d.min||'')+'">';
+ if(h.f=='sleep'){
+  const opts=[1,2,3,4,5].map(n=>'<option '+(d.q==n?'selected':'')+' value="'+n+'">品質 '+n+' 分</option>').join('');
+  return '<input id="hrs" type="number" step="0.5" inputmode="decimal" placeholder="昨晚睡眠時數" value="'+(d.hrs||'')+'"><select id="q">'+opts+'</select>';
+ }
+ if(h.f=='book'){
+  const rb=S.books.filter(b=>b.status=='reading');
+  if(rb.length&&!newBook){
+   const opts=rb.map(b=>'<option '+(d.title==b.title?'selected':'')+'>'+esc(b.title)+'</option>').join('');
+   return '<select id="bsel">'+opts+'</select><button data-a="newbook">輸入新書名</button>';
+  }
+  return '<input id="bnew" placeholder="輸入新書名">'+(rb.length?'<button data-a="oldbook">選擇閱讀中的書</button>':'');
+ }
+ return '';
+}
+function vToday(){
+ const n=count(),p=Math.round(n/7*100);
+ let html='<h2>Bloom Daily ♡</h2><div class="card c"><div class="sm">'+key()+'</div><h3>'+n+' / 7　·　'+p+'%</h3>'
+ +'<div class="bar"><i style="width:'+p+'%"></i></div><p>今日 XP：'+xp()+'</p>'
+ +'<span class="chip '+(n>=2?'on':'')+'">💌 話語 '+(n>=2?'已解鎖':'完成 2 項解鎖')+'</span>'
+ +'<span class="chip '+(n>=3?'on':'')+'">🌍 世界 '+(n>=3?'已解鎖':'完成 3 項解鎖')+'</span></div>';
+ HABITS.forEach(h=>{
+  const done=!!rd()[h.id];
+  let btn;
+  if(h.f)btn='<button data-a="open" data-v="'+h.id+'">'+(open==h.id?'收合':'展開')+'</button>';
+  else btn='<button class="'+(done?'':'main')+'" data-a="toggle" data-v="'+h.id+'">'+(done?'取消':'完成')+'</button>';
+  let body='';
+  if(open==h.id){
+   body='<div style="margin-top:8px">'+form(h)+'<div class="row" style="margin-top:6px"><button class="main" data-a="save" data-v="'+h.id+'">'+(h.f=='book'?'完成今日看書':'儲存打卡')+'</button>'
+   +(done?'<button data-a="toggle" data-v="'+h.id+'">取消打卡</button>':'')+'</div></div>';
+  }
+  html+='<div class="card '+(done?'done':'')+'"><div class="row"><div>'+h.e+' '+h.n+'<div class="sm">'+h.xp+' XP'+(done?' · 已完成':'')+'</div></div>'+btn+'</div>'+body+'</div>';
+ });
+ return html;
+}
+function saveHabit(id){
+ const g=s=>document.querySelector(s),d={};
+ if(id=='exercise'){d.types=[...document.querySelectorAll('.ex:checked')].map(x=>x.value);d.other=g('#exo').value.trim();d.min=+g('#min').value||0;
+  if(!d.types.length)return alert('請至少選一種運動');}
+ if(id=='english'||id=='japanese'){d.min=+g('#min').value||0;if(!d.min)return alert('請輸入分鐘數');}
+ if(id=='sleep'){d.hrs=+g('#hrs').value||0;d.q=+g('#q').value;if(!d.hrs)return alert('請輸入睡眠時數');}
+ if(id=='book'){
+  const nb=g('#bnew'),title=(nb?nb.value:g('#bsel').value).trim();
+  if(!title)return alert('請輸入或選擇書名');
+  const ex=S.books.find(b=>b.title.toLowerCase()==title.toLowerCase());
+  if(ex&&ex.status=='done')return alert('這本書已經讀完囉，會保留在書櫃的「已讀完」。');
+  if(!ex)S.books.push({title:title,status:'reading',note:'',added:key()});
+  d.title=ex?ex.title:title;newBook=false;}
+ wr()[id]=d;save();open=null;render();
+}
+
+/* ---------- 統計 ---------- */
+function lastDays(n){const a=[];for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);a.push(key(d))}return a}
+function chart(n){
+ const ds=lastDays(n),w=360,h=120,bw=w/n;
+ let bars='';
+ ds.forEach((k,i)=>{const c=count(k),bh=c/7*h;
+  bars+='<rect x="'+(i*bw+1)+'" y="'+(h-bh)+'" width="'+(bw-2)+'" height="'+Math.max(bh,2)+'" rx="3" fill="'+(c?'#f7b7a3':'#dcecf7')+'"/>';});
+ return '<svg viewBox="0 0 '+w+' '+(h+14)+'" width="100%">'+bars
+ +'<text x="0" y="'+(h+12)+'" font-size="9" fill="#999">'+ds[0].slice(5)+'</text><text x="'+w+'" y="'+(h+12)+'" font-size="9" fill="#999" text-anchor="end">'+ds[n-1].slice(5)+'</text></svg><div class="sm c">空白淡藍＝未記錄／0</div>';
+}
+function vStats(){
+ const d30=lastDays(30);
+ const per=HABITS.map(h=>{
+  const dd=d30.filter(k=>rd(k)[h.id]);let extra='';
+  if(['exercise','english','japanese'].includes(h.id))extra=' · '+dd.reduce((a,k)=>a+(rd(k)[h.id].min||0),0)+' 分鐘';
+  return '<div class="row"><span>'+h.e+' '+h.n+'</span><span>'+dd.length+'/30 天 ('+Math.round(dd.length/30*100)+'%)'+extra+'</span></div>';}).join('');
+ return '<h2>統計</h2><div class="card c"><h3>今日 '+count()+' / 7　·　'+Math.round(count()/7*100)+'%</h3>XP '+xp()+'</div>'
+ +'<div class="card"><b>近 7 天</b>'+chart(7)+'</div><div class="card"><b>近 30 天</b>'+chart(30)+'</div>'
+ +'<div class="card"><b>各習慣（近 30 天）</b>'+per+'<div class="sm">書櫃：閱讀中 '+S.books.filter(b=>b.status=='reading').length+' 本 · 已讀完 '+S.books.filter(b=>b.status=='done').length+' 本</div></div>'
+ +'<div class="card c"><b>備份</b><p class="sm">清除 Safari 網站資料會遺失紀錄，建議定期匯出。</p>'
+ +'<button data-a="export">匯出備份</button> <button data-a="import">還原備份</button><input id="imp" type="file" accept=".json" style="display:none"></div>';
+}
+
+/* ---------- 話語 ---------- */
+function speak(txt,lang,cb){const u=new SpeechSynthesisUtterance(txt);u.lang=lang;u.rate=slow?0.6:0.9;if(cb)u.onend=cb;speechSynthesis.speak(u)}
+function vQuote(){
+ if(count()<2)return '<h2>💌 話語</h2><div class="card c">🔒 今日完成 2 項習慣就能解鎖<br>目前 '+count()+' / 7</div>';
+ const q=QUOTES[S.lastQ];
+ let html='<h2>💌 話語</h2><div class="card c">';
+ if(q){
+  html+='<p style="font-size:18px">'+q.zh+'</p><p>'+q.en+'</p><p>'+q.ja+'</p>'
+  +'<button data-a="say" data-v="en">🔊 英文</button> <button data-a="say" data-v="ja">🔊 日文</button> <button data-a="say" data-v="both">英→日</button>'
+  +'<p><button data-a="slow" class="'+(slow?'main':'')+'">🐢 慢速</button> <button data-a="fav">'+(S.favQ.includes(S.lastQ)?'❤️ 已收藏':'🤍 收藏')+'</button></p>';
+ }else html+='<p>抽一句今天的話語吧</p>';
+ html+='<button class="main" data-a="drawq">'+(q?'再抽一句':'抽一句')+'</button></div>';
+ if(S.favQ.length)html+='<div class="card"><b>我的收藏</b>'+S.favQ.map(i=>'<p>'+QUOTES[i].zh+'<br><span class="sm">'+QUOTES[i].en+'</span></p>').join('')+'</div>';
+ return html;
+}
+
+/* ---------- 世界 ---------- */
+function map(pts){
+ const W=360,H=180;let g='';
+ for(let x=0;x<=W;x+=30)g+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+H+'" stroke="#fff" stroke-width=".6"/>';
+ for(let y=0;y<=H;y+=30)g+='<line x1="0" y1="'+y+'" x2="'+W+'" y2="'+y+'" stroke="#fff" stroke-width=".6"/>';
+ const dots=pts.map(p=>'<circle cx="'+(p.lon+180)+'" cy="'+(90-p.lat)+'" r="4" fill="#f7b7a3" stroke="#fff" stroke-width="1.5"/>').join('');
+ return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="border-radius:14px;background:#dcecf7">'+g+dots+'</svg>';
+}
+function placeCard(p){
+ return '<div class="card"><div style="height:140px;border-radius:14px;background:var(--lav);display:flex;align-items:center;justify-content:center" class="sm">📷 照片待授權配對</div>'
+ +'<h3>'+p.name+' <span class="sm">'+p.country+'</span></h3><p>'+p.story+'</p><p>✨ <b>你知道嗎？</b><br>'+p.fact+'</p><b>📍 它在地球的哪裡？</b>'+map([p])+'</div>';
+}
+function vWorld(){
+ if(count()<3)return '<h2>🌍 世界</h2><div class="card c">🔒 今日完成 3 項習慣就能解鎖<br>目前 '+count()+' / 7</div>';
+ const col=S.places.map(id=>PLACES.find(p=>p.id==id)).filter(Boolean),cur=PLACES.find(p=>p.id==S.lastP);
+ let html='<h2>🌍 世界</h2><div class="c" style="margin-bottom:12px"><button class="main" data-a="drawp">抽一張世界美景</button></div>';
+ if(cur)html+=placeCard(cur);
+ html+='<div class="card"><b>我的世界足跡地圖</b>'+map(col)+'<p class="sm c">已探索 '+col.length+' 個景點 · '+new Set(col.map(p=>p.country)).size+' 個國家／地區<br>「點亮」代表在 App 抽到，不代表實際到訪</p></div>';
+ col.forEach(p=>{html+='<div class="card"><div class="row"><div><b>'+p.name+'</b><div class="sm">'+p.country+'</div></div><button data-a="viewp" data-v="'+p.id+'">重讀</button></div></div>';});
+ return html;
+}
+
+/* ---------- 書櫃 ---------- */
+function vShelf(){
+ const list=S.books.filter(b=>b.status==shelf);
+ let html='<h2>📚 書櫃</h2><div class="c"><button class="'+(shelf=='reading'?'main':'')+'" data-a="shelf" data-v="reading">閱讀中</button> <button class="'+(shelf=='done'?'main':'')+'" data-a="shelf" data-v="done">已讀完</button></div><br>';
+ if(!list.length)return html+'<div class="card c sm">還沒有書。到「今日 → 看書」輸入新書名即可加入。</div>';
+ list.forEach(b=>{
+  html+='<div class="card"><b>'+esc(b.title)+'</b>';
+  if(shelf=='reading'){
+   if(finishing==b.title)html+='<textarea id="note" rows="4" placeholder="最有感觸的一件事"></textarea><button class="main" data-a="finish" data-v="'+esc(b.title)+'">完成閱讀並收藏</button>';
+   else html+='<p><button data-a="fin" data-v="'+esc(b.title)+'">♡ 我讀完這本書了</button></p>';
+  }else html+='<p class="sm">'+esc(b.note||'（沒有留下心得）')+'</p>';
+  html+='</div>';
+ });
+ return html;
+}
+
+/* ---------- 事件 ---------- */
+document.addEventListener('click',function(e){
+ const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,v=el.dataset.v;
+ if(a=='tab'){tab=v}
+ else if(a=='open'){open=open==v?null:v;newBook=false}
+ else if(a=='toggle'){const d=wr();if(d[v])delete d[v];else d[v]={};save()}
+ else if(a=='save')return saveHabit(v);
+ else if(a=='newbook'){newBook=true}else if(a=='oldbook'){newBook=false}
+ else if(a=='drawq'){S.lastQ=Math.floor(Math.random()*QUOTES.length);save()}
+ else if(a=='fav'){const i=S.favQ.indexOf(S.lastQ);i<0?S.favQ.push(S.lastQ):S.favQ.splice(i,1);save()}
+ else if(a=='slow'){slow=!slow}
+ else if(a=='say'){const q=QUOTES[S.lastQ];speechSynthesis.cancel();
+  if(v=='en')speak(q.en,'en-US');else if(v=='ja')speak(q.ja,'ja-JP');else speak(q.en,'en-US',function(){speak(q.ja,'ja-JP')});return}
+ else if(a=='drawp'){const p=PLACES[Math.floor(Math.random()*PLACES.length)];S.lastP=p.id;if(!S.places.includes(p.id))S.places.push(p.id);save()}
+ else if(a=='viewp'){S.lastP=v;scrollTo(0,0)}
+ else if(a=='shelf'){shelf=v;finishing=null}
+ else if(a=='fin'){finishing=v}
+ else if(a=='finish'){const b=S.books.find(b=>b.title==v);b.status='done';b.note=document.querySelector('#note').value.trim();b.doneOn=key();finishing=null;save()}
+ else if(a=='export'){const l=document.createElement('a');l.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));l.download='bloom-backup-'+key()+'.json';l.click();return}
+ else if(a=='import'){document.querySelector('#imp').click();return}
+ render();
+});
+document.addEventListener('change',function(e){
+ if(e.target.id=='imp'){const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=function(){try{S=JSON.parse(r.result);save();render();alert('已還原')}catch(_){alert('檔案格式錯誤')}};r.readAsText(f)}
+});
+render();
+</script></body></html>
 
