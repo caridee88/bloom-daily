@@ -5,27 +5,36 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Bloom Daily</title>
 <style>
-:root{--ice:#dcecf7;--ice2:#bcd9ee;--cream:#fffaf2;--peach:#f7b7a3;--lav:#e6dcf5;--ink:#4a4a5e}
+:root{--ice:#dcecf7;--ice2:#bcd9ee;--cream:#fffaf2;--peach:#f7b7a3;--lav:#e6dcf5;--ink:#5a5470}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--cream);color:var(--ink);font-family:-apple-system,"PingFang TC",sans-serif}
-#app{max-width:430px;margin:0 auto;padding:16px 14px 96px}
-h2{margin:6px 0 12px;text-align:center}
-.card{background:#fff;border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px #bcd9ee55}
+body{margin:0;color:var(--ink);font-family:ui-rounded,"SF Pro Rounded",-apple-system,"PingFang TC",sans-serif;background:linear-gradient(180deg,#e6f2fb 0%,#fffaf2 40%,#fdebe5 100%) fixed;min-height:100vh}
+#app{max-width:430px;margin:0 auto;padding:18px 14px 120px}
+h2{margin:8px 0 14px;text-align:center;color:#7d6aa8;letter-spacing:1px}
+h3{margin:6px 0}
+.card{position:relative;background:#fff;border:2px solid #fff;border-radius:26px;padding:16px;margin-bottom:14px;box-shadow:0 6px 18px #c9b8e855,0 2px 6px #bcd9ee66}
+.card.done{background:linear-gradient(135deg,#efe6fb,#fff3ee);border-color:#e6dcf5}
+.card.done::after{content:"🌸";position:absolute;top:-9px;left:12px;font-size:20px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.bar{height:10px;border-radius:9px;background:var(--ice);overflow:hidden}
-.bar i{display:block;height:100%;background:var(--peach)}
-button{border:0;border-radius:14px;padding:10px 14px;background:var(--ice2);color:var(--ink);font-size:15px}
-button.main{background:var(--peach)}
-input,select,textarea{width:100%;padding:10px;border:1px solid var(--ice2);border-radius:12px;margin:5px 0;font-size:16px;background:var(--cream)}
-.done{background:var(--lav)}
-.chip{display:inline-block;padding:6px 12px;border-radius:14px;background:var(--ice);margin:3px}
-.chip.on{background:var(--peach)}
+.bar{height:16px;border-radius:99px;background:var(--ice);overflow:hidden;box-shadow:inset 0 1px 3px #bcd9ee}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#ffd0c0,#f7a98f,#d9c6f2);transition:width .4s}
+button{border:0;border-radius:99px;padding:10px 18px;background:linear-gradient(180deg,#d5e9f8,#bcd9ee);color:var(--ink);font-size:15px;font-family:inherit;font-weight:600;box-shadow:0 3px 0 #a9c9e2;transition:transform .1s,box-shadow .1s}
+button:active{transform:translateY(3px) scale(.97);box-shadow:0 0 0 #a9c9e2}
+button.main{background:linear-gradient(180deg,#ffd3c4,#f7b09a);box-shadow:0 3px 0 #e79a84;color:#6b3f35}
+button.main:active{box-shadow:0 0 0 #e79a84}
+input,select,textarea{width:100%;padding:12px 14px;border:2px solid var(--ice);border-radius:18px;margin:6px 0;font-size:16px;background:#fffdf9;color:var(--ink);font-family:inherit;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--peach)}
+.chip{display:inline-block;padding:7px 14px;border-radius:99px;background:var(--ice);margin:3px;font-size:14px;font-weight:600}
+.chip.on{background:linear-gradient(180deg,#ffd3c4,#f7b7a3)}
+.em{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#e6f2fb,#f1e8fb);font-size:22px;margin-right:6px;vertical-align:middle}
 .c{text-align:center}.sm{font-size:13px;opacity:.7}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:#fffffff0;padding:8px 6px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--ice)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:#dcecf7;border-radius:28px 28px 0 0;border-top:3px solid #bcd9ee;padding:8px 8px calc(10px + env(safe-area-inset-bottom))}
 nav div{display:flex;max-width:430px;width:100%}
-nav button{flex:1;background:none;font-size:12px;padding:6px 0}
-nav button.on{background:var(--lav)}
-nav b{display:block;font-size:20px}
+nav button{flex:1;background:none;box-shadow:none;border-radius:0;font-size:11px;padding:6px 0;color:#7a8ba3;font-weight:600}
+nav button:active{transform:scale(.92);box-shadow:none;background:none}
+nav button b{display:block;font-size:24px;margin-bottom:2px;opacity:.55}
+nav button.on{color:#5a5470;background:none}
+nav button.on b{opacity:1}
+nav button.on::after{content:"";display:block;width:6px;height:6px;border-radius:50%;background:#f7b09a;margin:4px auto 0}
 </style></head><body>
 <div id="app"></div>
 <nav><div id="nav"></div></nav>
@@ -111,7 +120,7 @@ function vToday(){
    body='<div style="margin-top:8px">'+form(h)+'<div class="row" style="margin-top:6px"><button class="main" data-a="save" data-v="'+h.id+'">'+(h.f=='book'?'完成今日看書':'儲存打卡')+'</button>'
    +(done?'<button data-a="toggle" data-v="'+h.id+'">取消打卡</button>':'')+'</div></div>';
   }
-  html+='<div class="card '+(done?'done':'')+'"><div class="row"><div>'+h.e+' '+h.n+'<div class="sm">'+h.xp+' XP'+(done?' · 已完成':'')+'</div></div>'+btn+'</div>'+body+'</div>';
+  html+='<div class="card '+(done?'done':'')+'"><div class="row"><div><span class="em">'+h.e+'</span>'+h.n+'<div class="sm">'+h.xp+' XP'+(done?' · 已完成':'')+'</div></div>'+btn+'</div>'+body+'</div>';
  });
  return html;
 }
