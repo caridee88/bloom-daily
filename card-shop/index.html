@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-Hant-TW"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Bloom Daily 小卡商店</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#faf2ed;color:#593e32;font:16px -apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif}main{max-width:540px;margin:auto;padding:20px 16px max(24px,env(safe-area-inset-bottom))}header,nav,footer,.summary{display:flex;align-items:center;gap:12px}header,footer{justify-content:space-between}h1{font-size:1.7rem;margin:0}p{margin:14px 0 20px}button{font:inherit;color:inherit;cursor:pointer;border:0}button:focus-visible{outline:3px solid #744369;outline-offset:3px}button:disabled{cursor:default}.coins,.price{background:#ffedc6;border:1px solid #cea966;border-radius:999px;padding:8px 12px;font-weight:650;white-space:nowrap}.coins:before{content:"✦ ";color:#9c651d}nav{border-bottom:2px solid #e8cfc5;margin-bottom:14px}nav button{flex:1;background:none;padding:12px 0;border-radius:13px 13px 0 0}nav [aria-pressed=true]{background:#f8dce0;box-shadow:inset 0 -3px #a46d83;font-weight:700}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{background:var(--tint);border:2px solid transparent;border-radius:20px;overflow:hidden;text-align:center;padding:0 0 10px}.card.selected{border-color:#9a74a3}.card img{width:100%;aspect-ratio:1.48;object-fit:contain;display:block}.card h2{margin:0 2px 8px;font-size:clamp(1rem,4.3vw,1.25rem)}.price{min-height:44px;font-size:.9rem}.owned{background:#dde6d4;border-color:transparent}.short{background:#e9ded2;border-color:transparent}.box{margin:14px 0;border:1px solid #ad8ba4;border-radius:16px;padding:12px;background:#fff8f4}.summary img{width:68px;height:52px;object-fit:contain;border-radius:8px}.summary strong,.summary small{display:block}.summary small{margin-top:4px}.actions{display:flex;gap:8px;margin-top:10px}.confirm{flex:1;background:#805474;color:white;border-radius:10px;padding:12px;font-weight:700}.plain{background:transparent;text-decoration:underline;min-height:44px}.status{min-height:22px;margin:8px 0;font-size:.9rem}footer{font-size:.85rem;color:#725c50}
+</style>
+<main>
+<header><h1>小卡商店</h1><span class="coins" id="balance"></span></header>
+<p>用喵幣收藏小貓的小冒險</p>
+<nav aria-label="小卡分類"><button id="all" aria-pressed="true">全部小卡</button><button id="collection" aria-pressed="false">我的收藏</button></nav>
+<section class="grid" id="grid" aria-label="小卡"></section>
+<section id="panel" class="box" aria-label="兌換確認" hidden></section>
+<div id="status" class="status" role="status"></div>
+<footer><span>Bloom Daily · 測試模式</span><button class="plain" id="reset">重設測試</button></footer>
+</main>
+<script>
+const cards = [
+  {id:'ski', name:'雪地滑行', cost:60, color:'#eae0f2'},
+  {id:'dive', name:'海底探險', cost:80, color:'#d8ebe4'},
+  {id:'piano', name:'午後鋼琴', cost:100, color:'#f9dce0'},
+  {id:'climb', name:'攀岩挑戰', cost:220, color:'#fff0cc'}
+];
+const key = 'bloom-card-shop-demo-v1';
+const initial = () => ({coins:180, owned:['piano']});
+function readState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key));
+    return saved && Number.isInteger(saved.coins) && saved.coins >= 0 && Array.isArray(saved.owned) ? saved : initial();
+  } catch { return initial(); }
+}
+let state = readState();
+let collectionOnly = false;
+let selected = null;
+const byId = id => document.getElementById(id);
+function save() {
+  try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
+}
+function image(card, owned) {
+  return card.id + (owned ? '-open.webp' : '-locked.webp');
+}
+function render() {
+  byId('balance').textContent = state.coins + ' 喵幣';
+  byId('all').setAttribute('aria-pressed', !collectionOnly);
+  byId('collection').setAttribute('aria-pressed', collectionOnly);
+  byId('grid').innerHTML = cards.filter(card => !collectionOnly || state.owned.includes(card.id)).map(card => {
+    const owned = state.owned.includes(card.id);
+    const missing = card.cost - state.coins;
+    const label = owned ? '已收藏' : missing > 0 ? '還差 ' + missing + ' 喵幣' : card.cost + ' 喵幣';
+    return '<article class="card '+ (selected === card.id ? 'selected' : '') +'" style="--tint:'+card.color+'"><img alt="'+(owned ? card.name+'小貓插畫' : '未解鎖剪影')+'" src="'+image(card, owned)+'"><h2>'+card.name+'</h2><button data-card="'+card.id+'" aria-label="'+card.name+'，'+label+'" class="price '+(owned ? 'owned' : missing > 0 ? 'short' : '')+'" '+(owned ? 'disabled' : '')+'>'+label+'</button></article>';
+  }).join('');
+  const card = cards.find(item => item.id === selected);
+  const panel = byId('panel');
+  panel.hidden = !card;
+  panel.innerHTML = card ? '<div class="summary"><img src="'+image(card,false)+'" alt=""><div><strong>'+card.name+'</strong><small>兌換後剩 '+(state.coins-card.cost)+' 喵幣</small></div></div><div class="actions"><button class="plain" id="cancel">取消</button><button class="confirm" id="confirm">確認兌換 · '+card.cost+' 喵幣</button></div>' : '';
+}
+function notify(message) { byId('status').textContent = message; }
+function changeTab(showCollection) {
+  collectionOnly = showCollection;
+  selected = null;
+  notify('');
+  render();
+}
+byId('all').onclick = () => changeTab(false);
+byId('collection').onclick = () => changeTab(true);
+byId('grid').onclick = event => {
+  const button = event.target.closest('[data-card]');
+  if (!button) return;
+  const card = cards.find(item => item.id === button.dataset.card);
+  if (state.owned.includes(card.id)) return;
+  const missing = card.cost-state.coins;
+  selected = missing > 0 ? null : card.id;
+  render();
+  notify(missing > 0 ? '還差 '+missing+' 喵幣，就能兌換「'+card.name+'」。' : '');
+  if (selected) byId('confirm').focus();
+  else byId('grid').querySelector('[data-card="'+card.id+'"]').focus();
+};
+byId('panel').onclick = event => {
+  if (!['cancel','confirm'].includes(event.target.id)) return;
+  const card = cards.find(item => item.id === selected);
+  if (event.target.id === 'confirm' && card && state.coins >= card.cost && !state.owned.includes(card.id)) {
+    state = {coins:state.coins-card.cost, owned:[...state.owned,card.id]};
+    save();
+    notify('已解鎖「'+card.name+'」，可以到「我的收藏」查看。');
+  }
+  selected = null;
+  render();
+  const previous = card && byId('grid').querySelector('[data-card="'+card.id+'"]');
+  (previous && !previous.disabled ? previous : byId('collection')).focus();
+};
+byId('reset').onclick = () => {
+  state = initial();
+  save();
+  changeTab(false);
+  notify('測試已重設。');
+};
+render();
+</script>
+</html>
