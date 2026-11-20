@@ -110,6 +110,7 @@ function vToday(){
  const n=count(),p=Math.round(n/7*100);
  let html='<h2>Bloom Daily ♡</h2><div class="card c"><div class="sm">'+key()+'</div><h3>'+n+' / 7　·　'+p+'%</h3>'
  +'<div class="bar"><i style="width:'+p+'%"></i></div><p>今日 XP：'+xp()+'</p>'
+  +'<p><a class="chip" href="./card-shop/">🐾 小卡商店</a></p>'
  +'<span class="chip '+(n>=2?'on':'')+'">💌 話語 '+(n>=2?'已解鎖':'完成 2 項解鎖')+'</span>'
  +'<span class="chip '+(n>=3?'on':'')+'">🌍 世界 '+(n>=3?'已解鎖':'完成 3 項解鎖')+'</span></div>';
  HABITS.forEach(h=>{
