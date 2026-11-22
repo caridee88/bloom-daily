@@ -47,6 +47,7 @@ nav button.on::after{content:"";display:block;width:6px;height:6px;border-radius
 <script src="./card-shop/cards.js"></script>
 <script src="./card-shop/shop.js"></script>
 <script src="./stats/stats.js"></script>
+<script src="./quotes.js"></script>
 <script>
 window.onerror=function(m,s,l){document.getElementById('app').innerHTML='<pre style="padding:20px;white-space:pre-wrap;color:red">錯誤：'+m+' (行 '+l+')</pre>'};
 const HABITS=[
@@ -63,6 +64,7 @@ const QUOTES=[
 {zh:'小小的進步，也值得被慶祝。',en:'Even small progress deserves a celebration.',ja:'小さな一歩も、お祝いする価値があるよ。'},
 {zh:'深呼吸，一切都會慢慢變好。',en:'Breathe in. Things will slowly get better.',ja:'深呼吸して。きっと少しずつ良くなるよ。'},
 {zh:'做自己，就是最好的風景。',en:'Being yourself is the best scenery.',ja:'あなたらしさが、いちばんの景色だよ。'}];
+if (typeof BLOOM_EXTRA_QUOTES !== "undefined") QUOTES.push(...BLOOM_EXTRA_QUOTES);
 const PLACES=[
 {id:'santorini',name:'聖托里尼',country:'希臘',lat:36.39,lon:25.46,story:'白色屋舍沿著火山破火山口的懸崖層層排列，是愛琴海最具代表性的風景之一。',fact:'島嶼的形狀來自史前一次大規模火山噴發。'},
 {id:'fushimi',name:'伏見稻荷大社',country:'日本',lat:34.967,lon:135.773,story:'位於京都，以綿延山路上的朱紅鳥居聞名，自古是祈求商業與豐收的神社。',fact:'山徑上的鳥居數量以千計，多由企業與個人奉納。'},
@@ -164,12 +166,13 @@ function vQuote(){
  const q=QUOTES[S.lastQ];
  let html='<h2>💌 話語</h2><div class="card c">';
  if(q){
-  html+='<p style="font-size:18px">'+q.zh+'</p><p>'+q.en+'</p><p>'+q.ja+'</p>'
+  html+='<p style="font-size:18px">'+esc(q.zh)+'</p><p>'+esc(q.en)+'</p><p>'+esc(q.ja)+'</p>'
   +'<button data-a="say" data-v="en">🔊 英文</button> <button data-a="say" data-v="ja">🔊 日文</button> <button data-a="say" data-v="both">英→日</button>'
   +'<p><button data-a="slow" class="'+(slow?'main':'')+'">🐢 慢速</button> <button data-a="fav">'+(S.favQ.includes(S.lastQ)?'❤️ 已收藏':'🤍 收藏')+'</button></p>';
  }else html+='<p>抽一句今天的話語吧</p>';
  html+='<button class="main" data-a="drawq">'+(q?'再抽一句':'抽一句')+'</button></div>';
- if(S.favQ.length)html+='<div class="card"><b>我的收藏</b>'+S.favQ.map(i=>'<p>'+QUOTES[i].zh+'<br><span class="sm">'+QUOTES[i].en+'</span></p>').join('')+'</div>';
+ const favorites=S.favQ.map(i=>QUOTES[i]).filter(Boolean);
+ if(favorites.length)html+='<div class="card"><b>我的收藏</b>'+favorites.map(q=>'<p>'+esc(q.zh)+'<br><span class="sm">'+esc(q.en)+'</span></p>').join('')+'</div>';
  return html;
 }
 
