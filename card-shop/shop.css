@@ -1,0 +1,13 @@
+.shop-balance{margin:0;font-weight:700}
+.shop-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:14px}
+.shop-tabs button,.shop-card button,.shop-confirm button{min-height:44px}
+.shop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.shop-card{padding:8px 6px 10px;margin:0;text-align:center}
+.shop-card.selected{border-color:#9a74a3}
+.shop-card img{display:block;width:100%;aspect-ratio:1.48;object-fit:contain;border-radius:16px}
+.shop-card h3{font-size:16px;margin:7px 0}
+.shop-card button{font-size:14px;padding:8px 12px}
+.shop-card .chip{margin:0}
+.shop-confirm img{flex:none;width:68px;height:52px;object-fit:contain;border-radius:8px}
+.shop-confirm .row+.row{margin-top:12px}
+.shop-status{margin:10px 0;text-align:center}
