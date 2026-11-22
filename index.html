@@ -31,12 +31,26 @@ input:focus,select:focus,textarea:focus{border-color:var(--peach)}
 .c{text-align:center}.sm{font-size:13px;opacity:.7}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:#dcecf7;border-radius:28px 28px 0 0;border-top:3px solid #bcd9ee;padding:8px 8px calc(10px + env(safe-area-inset-bottom))}
 nav div{display:flex;max-width:430px;width:100%}
-nav button{flex:1;background:none;box-shadow:none;border-radius:0;font-size:11px;padding:6px 0;color:#7a8ba3;font-weight:600}
+nav button{flex:1;min-width:0;white-space:nowrap;background:none;box-shadow:none;border-radius:0;font-size:11px;padding:6px 0;color:#7a8ba3;font-weight:600}
 nav button:active{transform:scale(.92);box-shadow:none;background:none}
 nav button b{display:block;font-size:24px;margin-bottom:2px;opacity:.55}
 nav button.on{color:#5a5470;background:none}
 nav button.on b{opacity:1}
 nav button.on::after{content:"";display:block;width:6px;height:6px;border-radius:50%;background:#f7b09a;margin:4px auto 0}
+/* 小卡商店 */
+.shop-balance{margin:0;font-weight:700}
+.shop-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:14px}
+.shop-tabs button,.shop-card button,.shop-confirm button{min-height:44px}
+.shop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.shop-card{padding:8px 6px 10px;margin:0;text-align:center}
+.shop-card.selected{border-color:#9a74a3}
+.shop-card img{display:block;width:100%;aspect-ratio:1.48;object-fit:contain;border-radius:16px}
+.shop-card h3{font-size:16px;margin:7px 0}
+.shop-card button{font-size:14px;padding:8px 12px}
+.shop-card .chip{margin:0}
+.shop-confirm img{flex:none;width:68px;height:52px;object-fit:contain;border-radius:8px}
+.shop-confirm .row+.row{margin-top:12px}
+.shop-status{margin:10px 0;text-align:center}
 </style></head><body>
 <div id="app"></div>
 <nav><div id="nav"></div></nav>
@@ -68,7 +82,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 let S;
 try{S=JSON.parse(localStorage.getItem('bloom')||'null')}catch(_){S=null}
 S=S||{days:{},books:[],favQ:[],places:[],lastQ:null,lastP:null};
-const save=()=>{try{localStorage.setItem('bloom',JSON.stringify(S))}catch(_){}};
+const save=(state=S)=>{try{localStorage.setItem('bloom',JSON.stringify(state));return true}catch(_){return false}};
 const key=d=>{d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const rd=k=>S.days[k||key()]||{};
 const wr=()=>S.days[key()]||(S.days[key()]={});
@@ -77,9 +91,9 @@ const xp=k=>HABITS.filter(h=>rd(k)[h.id]).reduce((a,h)=>a+h.xp,0);
 let tab='today',open=null,newBook=false,shelf='reading',finishing=null,slow=false;
 
 function render(){
- const T=[['today','♡','今日'],['stats','▥','統計'],['quote','💌','話語'],['world','🌍','世界'],['shelf','📚','書櫃']];
- $('#nav').innerHTML=T.map(t=>'<button class="'+(tab==t[0]?'on':'')+'" data-a="tab" data-v="'+t[0]+'"><b>'+t[1]+'</b>'+t[2]+'</button>').join('') + `<button type="button" onclick="location.href='./card-shop/'"><b>🐾</b>小卡商店</button>`;
- const views={today:vToday,stats:vStats,quote:vQuote,world:vWorld,shelf:vShelf};
+ const T=[['today','♡','今日'],['stats','▥','統計'],['quote','💌','話語'],['world','🌍','世界'],['shelf','📚','書櫃'],['shop','🐾','小卡商店']];
+ $('#nav').innerHTML=T.map(t=>'<button type="button" class="'+(tab==t[0]?'on':'')+'"'+(tab==t[0]?' aria-current="page"':'')+' data-a="tab" data-v="'+t[0]+'"><b aria-hidden="true">'+t[1]+'</b>'+t[2]+'</button>').join('');
+ const views={today:vToday,stats:vStats,quote:vQuote,world:vWorld,shelf:vShelf,shop:vShop};
  $('#app').innerHTML=views[tab]();
 }
 
@@ -109,7 +123,7 @@ function form(h){
 function vToday(){
  const n=count(),p=Math.round(n/7*100);
  let html='<h2>Bloom Daily ♡</h2><div class="card c"><div class="sm">'+key()+'</div><h3>'+n+' / 7　·　'+p+'%</h3>'
- +'<div class="bar"><i style="width:'+p+'%"></i></div><p>今日 XP：'+xp()+'</p>'
+ +'<div class="bar"><i style="width:'+p+'%"></i></div><p>今日喵幣：'+xp()+'</p>'+walletSummary()
  +'<span class="chip '+(n>=2?'on':'')+'">💌 話語 '+(n>=2?'已解鎖':'完成 2 項解鎖')+'</span>'
  +'<span class="chip '+(n>=3?'on':'')+'">🌍 世界 '+(n>=3?'已解鎖':'完成 3 項解鎖')+'</span></div>';
  HABITS.forEach(h=>{
@@ -122,7 +136,7 @@ function vToday(){
    body='<div style="margin-top:8px">'+form(h)+'<div class="row" style="margin-top:6px"><button class="main" data-a="save" data-v="'+h.id+'">'+(h.f=='book'?'完成今日看書':'儲存打卡')+'</button>'
    +(done?'<button data-a="toggle" data-v="'+h.id+'">取消打卡</button>':'')+'</div></div>';
   }
-  html+='<div class="card '+(done?'done':'')+'"><div class="row"><div><span class="em">'+h.e+'</span>'+h.n+'<div class="sm">'+h.xp+' XP'+(done?' · 已完成':'')+'</div></div>'+btn+'</div>'+body+'</div>';
+  html+='<div class="card '+(done?'done':'')+'"><div class="row"><div><span class="em">'+h.e+'</span>'+h.n+'<div class="sm">'+h.xp+' 喵幣'+(done?' · 已完成':'')+'</div></div>'+btn+'</div>'+body+'</div>';
  });
  return html;
 }
@@ -158,7 +172,7 @@ function vStats(){
   const dd=d30.filter(k=>rd(k)[h.id]);let extra='';
   if(['exercise','english','japanese'].includes(h.id))extra=' · '+dd.reduce((a,k)=>a+(rd(k)[h.id].min||0),0)+' 分鐘';
   return '<div class="row"><span>'+h.e+' '+h.n+'</span><span>'+dd.length+'/30 天 ('+Math.round(dd.length/30*100)+'%)'+extra+'</span></div>';}).join('');
- return '<h2>統計</h2><div class="card c"><h3>今日 '+count()+' / 7　·　'+Math.round(count()/7*100)+'%</h3>XP '+xp()+'</div>'
+ return '<h2>統計</h2><div class="card c"><h3>今日 '+count()+' / 7　·　'+Math.round(count()/7*100)+'%</h3>今日喵幣：'+xp()+'</div>'
  +'<div class="card"><b>近 7 天</b>'+chart(7)+'</div><div class="card"><b>近 30 天</b>'+chart(30)+'</div>'
  +'<div class="card"><b>各習慣（近 30 天）</b>'+per+'<div class="sm">書櫃：閱讀中 '+S.books.filter(b=>b.status=='reading').length+' 本 · 已讀完 '+S.books.filter(b=>b.status=='done').length+' 本</div></div>'
  +'<div class="card c"><b>備份</b><p class="sm">清除 Safari 網站資料會遺失紀錄，建議定期匯出。</p>'
@@ -219,10 +233,100 @@ function vShelf(){
  return html;
 }
 
+/* ---------- 小卡商店 ---------- */
+const SHOP_CARDS=[
+ {id:'ski',name:'雪地滑行',cost:60},
+ {id:'dive',name:'海底探險',cost:80},
+ {id:'piano',name:'午後鋼琴',cost:100},
+ {id:'climb',name:'攀岩挑戰',cost:220}
+];
+// The check-in history records earnings. Each redemption stores its original cost.
+function shopPurchases(){
+ const purchases=S.shopPurchases;
+ if(!purchases||typeof purchases!=='object')return {};
+ return Object.fromEntries(SHOP_CARDS.filter(card=>
+  Number.isSafeInteger(purchases[card.id])&&purchases[card.id]>0
+ ).map(card=>[card.id,purchases[card.id]]));
+}
+function walletBalance(){
+ const earned=Object.keys(S.days).reduce((sum,date)=>sum+xp(date),0);
+ const spent=Object.values(shopPurchases()).reduce((sum,cost)=>sum+cost,0);
+ return earned-spent;
+}
+function walletSummary(){
+ const balance=walletBalance();
+ return '<p class="shop-balance">🐾 可用喵幣：'+Math.max(0,balance)+'</p>'
+  +(balance<0?'<p class="sm">已兌換的小卡會保留，還需補 '+(-balance)+' 喵幣。</p>':'');
+}
+let shopCollection=false, shopSelected=null, shopMessage='';
+function shopImage(card,owned,decorative=false){
+ const src='./card-shop/'+card.id+(owned?'-open.webp':'-locked.webp');
+ const alt=decorative?'':owned?card.name+'的小貓插畫':'未解鎖剪影';
+ return '<img src="'+src+'" alt="'+alt+'">';
+}
+function vShop(){
+ const purchases=shopPurchases(), balance=walletBalance();
+ const cards=SHOP_CARDS.filter(card=>!shopCollection||purchases[card.id]);
+ const tiles=cards.map(card=>{
+  const owned=Boolean(purchases[card.id]), missing=card.cost-balance;
+  const label=missing>0?'還差 '+missing+' 喵幣':card.cost+' 喵幣';
+  const action=owned?'<span class="chip on">已收藏</span>'
+   :'<button type="button" class="'+(missing>0?'':'main')+'" data-a="shop-select" data-v="'+card.id+'" aria-label="'+card.name+'，'+label+'">'+label+'</button>';
+  return '<article class="card shop-card '+(shopSelected===card.id?'selected':'')+'">'+shopImage(card,owned)+'<h3>'+card.name+'</h3>'+action+'</article>';
+ }).join('');
+ const selected=SHOP_CARDS.find(card=>card.id===shopSelected);
+ const panel=selected?'<section class="card shop-confirm" aria-label="兌換確認"><div class="row">'+shopImage(selected,false,true)
+  +'<div><b>'+selected.name+'</b><div class="sm">兌換後剩 '+(balance-selected.cost)+' 喵幣</div></div></div>'
+  +'<div class="row"><button type="button" data-a="shop-cancel">取消</button>'
+  +'<button type="button" class="main" data-a="shop-confirm">確認兌換 · '+selected.cost+' 喵幣</button></div></section>':'';
+ return '<h2>🐾 小卡商店</h2><div class="card c">'+walletSummary()+'<p class="sm">用喵幣收藏小貓的小冒險</p></div>'
+  +'<div class="shop-tabs" role="group" aria-label="小卡分類"><button type="button" class="'+(!shopCollection?'main':'')+'" data-a="shop-filter" data-v="all" aria-pressed="'+!shopCollection+'">全部小卡</button>'
+  +'<button type="button" class="'+(shopCollection?'main':'')+'" data-a="shop-filter" data-v="collection" aria-pressed="'+shopCollection+'">我的收藏</button></div>'
+  +(tiles?'<div class="shop-grid">'+tiles+'</div>':'<div class="card c">還沒有收藏的小卡。</div>')+panel
+  +'<p class="shop-status" role="status">'+esc(shopMessage)+'</p>';
+}
+function handleShopAction(action,value){
+ const card=SHOP_CARDS.find(item=>item.id===(action==='shop-select'?value:shopSelected));
+ const tile=card?'[data-a="shop-select"][data-v="'+card.id+'"]':null;
+ let focus=tile;
+ shopMessage='';
+ if(action==='shop-filter'){
+  shopCollection=value==='collection';
+  shopSelected=null;
+  focus='[data-a="shop-filter"][aria-pressed="true"]';
+ }else if(action==='shop-select'){
+  if(!card||shopPurchases()[card.id])return;
+  const missing=card.cost-walletBalance();
+  shopSelected=missing>0?null:card.id;
+  if(missing>0)shopMessage='再存 '+missing+' 喵幣，就能兌換「'+card.name+'」。';
+  else focus='[data-a="shop-confirm"]';
+ }else if(action==='shop-cancel'){
+  shopSelected=null;
+ }else if(action==='shop-confirm'){
+  shopSelected=null;
+  const purchases=shopPurchases();
+  if(card&&!purchases[card.id]&&walletBalance()>=card.cost){
+   const next={...S,shopPurchases:{...purchases,[card.id]:card.cost}};
+   if(save(next)){
+    S=next;
+    shopMessage='已解鎖「'+card.name+'」。';
+    focus='[data-a="shop-filter"][data-v="collection"]';
+   }else shopMessage='無法儲存這次兌換，請再試一次。';
+  }else shopMessage='餘額或收藏已更新，請重新選擇小卡。';
+ }
+ render();
+ const target=focus&&$(focus);
+ if(target)target.focus();
+}
+
 /* ---------- 事件 ---------- */
 document.addEventListener('click',function(e){
  const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,v=el.dataset.v;
- if(a=='tab'){tab=v}
+ if(a=='tab'){
+  if(tab!==v){scrollTo(0,0);shopSelected=null;shopMessage=''}
+  tab=v;
+ }
+ else if(a.startsWith('shop-'))return handleShopAction(a,v);
  else if(a=='open'){open=open==v?null:v;newBook=false}
  else if(a=='toggle'){const d=wr();if(d[v])delete d[v];else d[v]={};save()}
  else if(a=='save')return saveHabit(v);
@@ -246,5 +350,247 @@ document.addEventListener('change',function(e){
  r.onload=function(){try{S=JSON.parse(r.result);save();render();alert('已還原')}catch(_){alert('檔案格式錯誤')}};r.readAsText(f)}
 });
 render();
-</script><script src="quotes.js"></script><script src="places1.js"></script><script src="world.js"></script><script src="cute.js"></script></body></html>
+</script><script>
+PLACES.push(...[
+['taj','泰姬瑪哈陵','印度',27.175,78.042,'Taj Mahal','蒙兀兒皇帝沙賈汗為紀念愛妻而建的白色大理石陵墓，是印度最具代表性的建築。','建造前後花了二十多年，據說在清晨與黃昏的光線下會呈現不同的色調。'],
+['greatwall','八達嶺長城','中國',40.36,116.02,'Great Wall of China','長城由不同朝代陸續修築，沿著北方山脊蜿蜒，八達嶺是最常被造訪的一段。','今日最知名的城牆多半是明朝時期修建或重修的。'],
+['angkor','吳哥窟','柬埔寨',13.4125,103.867,'Angkor Wat','十二世紀高棉帝國興建的寺廟，最初供奉印度教神祇毘濕奴，後來成為佛教寺院。','它的圖案出現在柬埔寨的國旗上。'],
+['fuji','富士山','日本',35.3606,138.7274,'Mount Fuji','日本最高峰，山形對稱優美，自古是信仰與藝術的象徵。','海拔 3,776 公尺，是日本最高的山。'],
+['halong','下龍灣','越南',20.91,107.18,'Ha Long Bay','一千多座石灰岩小島散布在碧綠的海灣中，是越南北部最壯觀的海景之一。','「下龍」的意思是「龍降下之處」。'],
+['bagan','蒲甘','緬甸',21.1717,94.8585,'Bagan','廣闊的平原上散布著數千座佛塔與寺廟，主要興建於十一至十三世紀。','天氣好的清晨，常能看到熱氣球飄在佛塔上空。'],
+['zhangjiajie','張家界','中國',29.3248,110.4343,'Zhangjiajie National Forest Park','數千根石英砂岩石柱聳立在雲霧之中，形成奇特的山林景觀。','據說這裡的景象影響了電影《阿凡達》中浮空山的造型。'],
+['borobudur','婆羅浮屠','印尼',-7.6079,110.2038,'Borobudur','建於九世紀的大乘佛教佛塔，位於爪哇島中部，是世界最大的佛教建築之一。','它的石塊以榫接方式相互嵌合，整體造型像一座立體的曼荼羅。'],
+['maldives','馬爾地夫','馬爾地夫',4.1755,73.5093,'Maldives','由珊瑚環礁組成的印度洋島國，潟湖水色清澈透亮。','全國平均海拔很低，是世界上地勢最低的國家之一。'],
+['paro','虎穴寺','不丹',27.4916,89.3634,'Paro Taktsang','佛教寺院懸建在帕羅山谷旁的峭壁上，是不丹最神聖的地點之一。','寺院位於海拔約三千公尺的高處，需要健行才能到達。'],
+['wadirum','瓦地倫','約旦',29.5,35.42,'Wadi Rum','紅色沙漠中矗立著巨大的砂岩山峰，被稱為「月亮谷」。','這片沙漠地貌曾是多部電影的取景地。'],
+['cappadocia','卡帕多奇亞','土耳其',38.6431,34.8287,'Cappadocia','火山凝灰岩被風雨雕塑成奇特的岩柱，古人還在岩石中開鑿住所與教堂。','清晨常有大批熱氣球一起升空。'],
+['pamukkale','棉堡','土耳其',37.9204,29.1187,'Pamukkale','含鈣的溫泉水沿山坡沉積，形成雪白的階梯式水池。','「Pamukkale」在土耳其語中是「棉花城堡」的意思。'],
+['venice','威尼斯','義大利',45.4408,12.3155,'Venice','建在潟湖上的水都，以運河與貢多拉聞名。','整座城市建在無數打入泥地的木樁之上。'],
+['cinque','五漁村','義大利',44.1461,9.6439,'Cinque Terre','五個彩色村落坐落在懸崖與海之間，是義大利西北海岸的明珠。','村落之間有步道與鐵路相連，山坡上還有人工梯田。'],
+['eiffel','艾菲爾鐵塔','法國',48.8584,2.2945,'Eiffel Tower','為 1889 年巴黎世界博覽會而建，如今是巴黎最具代表性的地標。','它原本只計畫保留二十年。'],
+['montsaintmichel','聖米歇爾山','法國',48.636,-1.5115,'Mont-Saint-Michel','海上岩島的頂端矗立著中世紀修道院，層層建築沿山而上。','漲潮時四周被海水包圍，成為一座海上孤島。'],
+['neuschwanstein','新天鵝堡','德國',47.5576,10.7498,'Neuschwanstein Castle','十九世紀巴伐利亞國王路德維希二世下令興建，造型宛如童話城堡。','一般認為它的樣貌啟發了迪士尼的睡美人城堡。'],
+['cliffsmoher','莫赫懸崖','愛爾蘭',52.9715,-9.4309,'Cliffs of Moher','面向大西洋的高聳海崖，綿延數公里。','最高處超過兩百公尺。'],
+['stonehenge','巨石陣','英國',51.1789,-1.8262,'Stonehenge','英格蘭平原上的史前巨石圈，開始建造的時間約在五千年前。','部分較小的藍砂岩石塊，是從兩百多公里外的威爾斯運來的。'],
+['thingvellir','辛格韋德利','冰島',64.2559,-21.1299,'Þingvellir National Park','位於板塊交界處的裂谷地形，也是冰島古代議會的舊址。','冰島議會約在西元 930 年於此成立，是世界上最古老的議會之一。'],
+['tromso','特羅姆瑟','挪威',69.6492,18.9553,'Tromsø','位於北極圈內的城市，是欣賞極光的熱門地點。','冬季會有「極夜」，太陽有一段時間不會升出地平線。'],
+['alhambra','阿罕布拉宮','西班牙',37.176,-3.5881,'Alhambra','格拉納達山丘上的摩爾式宮殿與要塞，牆面佈滿精細的幾何與花紋雕飾。','名稱源自阿拉伯語，意思是「紅色的」。'],
+['sagrada','聖家堂','西班牙',41.4036,2.1744,'Sagrada Família','建築師高第設計的大教堂，外觀如同石頭雕成的森林。','它在 1882 年開始興建，是一項長年持續進行的工程。'],
+['parthenon','帕德嫩神殿','希臘',37.9715,23.7267,'Parthenon','矗立在雅典衛城上的古希臘神殿，獻給智慧女神雅典娜。','它建於西元前五世紀。'],
+['pyramids','吉薩金字塔','埃及',29.9792,31.1342,'Giza pyramid complex','古埃及法老的陵墓群，守護它們的還有人面獅身像。','大金字塔是古代世界七大奇蹟中，唯一保存至今的一個。'],
+['serengeti','塞倫蓋蒂','坦尚尼亞',-2.3333,34.8333,'Serengeti National Park','遼闊的草原生態系，是野生動物的天堂。','每年有上百萬頭角馬隨著雨季展開大遷徙。'],
+['kilimanjaro','吉力馬札羅山','坦尚尼亞',-3.0674,37.3556,'Mount Kilimanjaro','非洲最高峰，是一座獨立聳立在平原上的火山。','海拔約 5,895 公尺。'],
+['chefchaouen','舍夫沙萬','摩洛哥',35.1688,-5.2636,'Chefchaouen','山間小城的牆壁與街巷塗滿深淺不一的藍色。','關於這些藍色的由來，有好幾種不同的說法。'],
+['grandcanyon','大峽谷','美國',36.1069,-112.1129,'Grand Canyon','科羅拉多河經過漫長歲月切割出的巨大峽谷，岩層呈現紅橙色。','峽谷全長約 446 公里。'],
+['antelope','羚羊峽谷','美國',36.8619,-111.3743,'Antelope Canyon','位於納瓦荷族土地上的狹縫峽谷，砂岩被水流雕出柔和的波浪線條。','接近正午時，光束會從縫隙射入谷中。'],
+['moraine','夢蓮湖','加拿大',51.3217,-116.186,'Moraine Lake','位於十峰谷的冰川湖，被一圈高聳山峰環抱。','湖水由冰川融水補給，夏季水色最藍。'],
+['chichen','奇琴伊察','墨西哥',20.6843,-88.5678,'Chichen Itza','馬雅文明的大型城市遺址，以庫庫爾坎金字塔聞名。','春分與秋分的日落時，金字塔階梯上會出現蛇形的光影。'],
+['christ','基督像','巴西',-22.9519,-43.2105,'Christ the Redeemer (statue)','張開雙臂的巨大雕像，俯瞰著里約熱內盧與海灣。','它在 1931 年落成，雕像本身約三十公尺高。'],
+['uyuni','烏尤尼鹽沼','玻利維亞',-20.1338,-67.4891,'Salar de Uyuni','世界最大的鹽沼，雨季時薄薄的水層會把天空映成一面巨大的鏡子。','面積超過一萬平方公里。'],
+['easter','復活節島','智利',-27.1127,-109.3497,'Easter Island','太平洋上的孤島，島上矗立著許多巨大的摩艾石像。','島上有八百多座摩艾石像。'],
+['galapagos','加拉巴哥群島','厄瓜多',-0.9538,-90.9656,'Galápagos Islands','赤道上的火山群島，許多生物只在這裡才找得到。','達爾文在 1835 年造訪此地，對他日後的演化理論有重要影響。'],
+['milford','米佛峽灣','紐西蘭',-44.6414,167.8974,'Milford Sound','陡峭山壁直落海面，瀑布從高處傾瀉而下。','它名叫 Sound，其實是冰川切割出的峽灣。'],
+['uluru','烏魯魯','澳洲',-25.3444,131.0369,'Uluru','澳洲中部的巨大紅色砂岩，對當地原住民族阿南古人有重要的意義。','岩石的顏色會隨日出與日落由紅轉橙。'],
+['gbr','大堡礁','澳洲',-18.2871,147.6992,'Great Barrier Reef','世界最大的珊瑚礁系統，孕育了豐富的海洋生物。','它綿延超過兩千公里，由數千個礁體組成。']
+].map(function(a){return{id:a[0],name:a[1],country:a[2],lat:a[3],lon:a[4],wiki:a[5],story:a[6],fact:a[7]}}));
 
+</script><script>
+(function(){
+var W0={santorini:'Santorini',fushimi:'Fushimi Inari-taisha',machu:'Machu Picchu',louise:'Lake Louise (Alberta)',petra:'Petra'};
+
+var landPath='',landState=0,WK={},showN=30;
+function wikiOf(p){return p.wiki||W0[p.id]||p.name}
+
+function loadLand(){
+ if(landState)return;landState=1;
+ var s=document.createElement('script');
+ s.src='https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js';
+ s.onload=function(){
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(function(r){return r.json()}).then(function(t){
+   var f=topojson.feature(t,t.objects.land),d='';
+   var geos=f.type=='FeatureCollection'?f.features.map(function(x){return x.geometry}):[f.geometry];
+   function ring(r){for(var i=0;i<r.length;i++)d+=(i?'L':'M')+(r[i][0]+180).toFixed(1)+' '+(90-r[i][1]).toFixed(1);d+='Z'}
+   geos.forEach(function(g){
+    if(g.type=='Polygon')g.coordinates.forEach(ring);
+    else if(g.type=='MultiPolygon')g.coordinates.forEach(function(p){p.forEach(ring)});
+   });
+   landPath=d;landState=2;if(tab=='world')render();
+  }).catch(function(){landState=0});
+ };
+ s.onerror=function(){landState=0};
+ document.head.appendChild(s);
+}
+
+function mapSvg(pts,zoom,r){
+ var W=360,H=180,vb='0 0 360 180';
+ if(zoom&&pts.length){
+  var p0=pts[0],w=90,h=45;
+  var x=Math.max(0,Math.min(W-w,p0.lon+180-w/2)),y=Math.max(0,Math.min(H-h,90-p0.lat-h/2));
+  vb=x.toFixed(1)+' '+y.toFixed(1)+' '+w+' '+h;
+ }
+ var bg='';
+ if(landPath)bg='<use href="#landp" fill="#fffaf2" stroke="#bcd9ee" stroke-width=".3"/>';
+ else{
+  for(var a=0;a<=W;a+=30)bg+='<line x1="'+a+'" y1="0" x2="'+a+'" y2="'+H+'" stroke="#fff" stroke-width=".6"/>';
+  for(var b=0;b<=H;b+=30)bg+='<line x1="0" y1="'+b+'" x2="'+W+'" y2="'+b+'" stroke="#fff" stroke-width=".6"/>';
+ }
+ var dots=pts.map(function(p){
+  var cx=(p.lon+180).toFixed(2),cy=(90-p.lat).toFixed(2);
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#f7a58c" stroke="#fff" stroke-width="'+(r*.35)+'"/><circle cx="'+cx+'" cy="'+cy+'" r="'+(r*.38)+'" fill="#fff"/>';
+ }).join('');
+ return '<svg viewBox="'+vb+'" width="100%" style="display:block;border-radius:14px;background:#dcecf7" role="img" aria-label="地圖">'+bg+dots+'</svg>';
+}
+
+function placeCard(p){
+ return '<div class="card"><div id="ph" data-id="'+p.id+'" style="min-height:120px;border-radius:18px;background:#e6dcf5;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:13px;color:#8a84a0">📷 載入照片中…</div>'
+ +'<div id="phc" style="font-size:12px;color:#8a84a0;margin:6px 0 0"></div>'
+ +'<h3>'+esc(p.name)+' <span class="sm">'+esc(p.country)+'</span></h3><p>'+esc(p.story)+'</p>'
+ +'<p>✨ <b>你知道嗎？</b><br>'+esc(p.fact)+'</p>'
+ +'<b>📍 它在地球的哪裡？</b><div style="margin-top:6px">'+mapSvg([p],true,1.6)+'</div></div>';
+}
+
+function loadPhoto(p){
+ var id=p.id;
+ function show(d){
+  var box=document.getElementById('ph'),cr=document.getElementById('phc');
+  if(!box||box.dataset.id!=id)return;
+  if(d&&d.thumbnail&&d.thumbnail.source){
+   var small=d.thumbnail.source,big=small.replace(/\/(\d+)px-/,'/500px-');
+   var img=document.createElement('img');
+   img.alt=p.name;img.style.cssText='width:100%;height:190px;object-fit:cover;display:block';
+   img.onerror=function(){img.onerror=null;img.src=small};
+   img.src=big;
+   box.innerHTML='';box.style.minHeight='0';box.appendChild(img);
+   var page=d.content_urls&&d.content_urls.desktop?d.content_urls.desktop.page:'';
+   cr.innerHTML='照片來源：'+(page?'<a href="'+page+'" target="_blank" style="color:#7d6aa8">Wikipedia／Wikimedia Commons</a>':'Wikipedia／Wikimedia Commons')+'，授權依原頁面標示';
+  }else{box.textContent='（這個景點暫時沒有照片）'}
+ }
+ if(WK[id]!==undefined){show(WK[id]);return}
+ fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(wikiOf(p).replace(/ /g,'_')))
+  .then(function(r){return r.json()}).then(function(d){WK[id]=d;show(d)})
+  .catch(function(){show(null)});
+}
+
+vWorld=function(){
+ var n=count();
+ var col=S.places.map(function(id){return PLACES.find(function(p){return p.id==id})}).filter(Boolean);
+ var cur=PLACES.find(function(p){return p.id==S.lastP});
+ var h='<h2>🌍 世界</h2>';
+ if(landPath)h+='<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><path id="landp" fill-rule="evenodd" d="'+landPath+'"/></defs></svg>';
+ if(n<3)h+='<div class="card c">🔒 今日完成 3 項習慣，就能抽新的景點<br>目前 '+n+' / 7</div>';
+ else h+='<div class="c" style="margin-bottom:12px"><button class="main" data-a="draw2">抽一張世界美景</button><div class="sm" style="margin-top:6px">已探索 '+col.length+' / '+PLACES.length+'</div></div>';
+ if(cur)h+=placeCard(cur);
+ h+='<div class="card"><b>我的世界足跡地圖</b><div style="margin-top:8px">'+mapSvg(col,false,3)+'</div>'
+  +'<p class="sm c">已探索 '+col.length+' 個景點 · '+new Set(col.map(function(p){return p.country})).size+' 個國家／地區<br>「點亮」代表在 App 抽到，不代表實際到訪</p></div>';
+ col.slice().reverse().slice(0,showN).forEach(function(p){
+  h+='<div class="card" style="padding:12px"><div class="row"><div style="flex:none;width:96px">'+mapSvg([p],true,3)+'</div>'
+   +'<div style="flex:1;min-width:0"><b>'+esc(p.name)+'</b><div class="sm">'+esc(p.country)+'</div></div>'
+   +'<button data-a="view2" data-v="'+p.id+'">重讀</button></div></div>';
+ });
+ if(col.length>showN)h+='<div class="c"><button data-a="more2">顯示更多</button></div>';
+ return h;
+};
+
+var _render=render;
+render=function(){_render();if(tab=='world'){loadLand();var c=PLACES.find(function(p){return p.id==S.lastP});if(c)loadPhoto(c)}};
+
+document.addEventListener('click',function(e){
+ var el=e.target.closest('[data-a]');if(!el)return;var a=el.dataset.a,v=el.dataset.v;
+ if(a=='draw2'){
+  if(count()<3)return;
+  var left=PLACES.filter(function(p){return S.places.indexOf(p.id)<0});
+  var pool=left.length?left:PLACES;
+  var p=pool[Math.floor(Math.random()*pool.length)];
+  S.lastP=p.id;if(S.places.indexOf(p.id)<0)S.places.push(p.id);
+  save();render();scrollTo(0,0);
+ }else if(a=='view2'){S.lastP=v;save();render();scrollTo(0,0)}
+ else if(a=='more2'){showN+=30;render()}
+});
+})();
+
+</script><script>
+(function(){
+var st=document.createElement('style');
+st.textContent='@keyframes bdWig{0%,100%{transform:rotate(0)}30%{transform:rotate(-2deg)}60%{transform:rotate(2deg)}}'
++'.bd-hi{padding:0 8px;margin:-8px 0 16px;text-align:center;font-size:14px;color:#8a7fa6;letter-spacing:.5px}'
++'.bd-hi.w{animation:bdWig .4s ease}'
++'.bd-tip{font-size:13px;color:#8a7fa6;margin:8px 0 0;letter-spacing:.3px}'
++'.bd-toast{position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#ffd3c4;color:#6b3f35;padding:10px 18px;border-radius:99px;font-size:14px;font-weight:600;box-shadow:0 6px 16px #f7b7a355;z-index:9;transition:opacity .4s;white-space:nowrap}';
+document.head.appendChild(st);
+
+function hello(){var h=new Date().getHours();
+ if(h<5)return '夜深了，要早點休息喔 🌙';if(h<11)return '早安 ☀️';if(h<14)return '午安 🍙';if(h<18)return '午後好 🍵';return '晚上好 🌙';}
+function streak(){var c=0,d=new Date();if(!count(key(d)))d.setDate(d.getDate()-1);while(count(key(d))>0){c++;d.setDate(d.getDate()-1)}return c}
+function lines(){
+ var n=count(),l2=Math.max(0,2-n),l3=Math.max(0,3-n),hi=hello();
+ if(tab=='today'){
+  if(n==0)return [hi+' 今天從一件小事開始就好',hi+' 先喝杯水，再慢慢打卡吧','今天也一起慢慢開花吧 🌸'];
+  if(n==1)return ['好的開始！再一項就能解鎖話語 💌','第一朵花開了 🌸 再接再厲'];
+  if(n==2)return ['話語解鎖了！再一項就能去環遊世界 🌍','做得好～世界正在等你'];
+  if(n<7)return ['已經完成 '+n+' 項了，你好棒 ✨','剩下的隨心就好，不用勉強','今天的你，正在閃閃發光'];
+  return ['七項全部完成！今天的你滿分 🎉','全部完成～給自己一個大大的擁抱 🤍'];
+ }
+ if(tab=='stats'){var s=streak();
+  return [s>1?'已經連續記錄 '+s+' 天了，好厲害 🔥':'來看看這陣子的自己吧 📊','每一格都是你留下的足跡','不管高低起伏，都是成長的一部分'];}
+ if(tab=='quote'){
+  if(l2)return ['再完成 '+l2+' 項，就能來抽一句話 💌','話語扭蛋在等你喔'];
+  return ['今天想收到哪一句話呢？','抽一句，帶著它過今天吧 💌','喜歡的話，記得按愛心收藏'];}
+ if(tab=='world'){
+  if(l3)return ['再完成 '+l3+' 項，就能出發去旅行 ✈️','護照準備好了，只差一點點'];
+  var e=S.places.length;return ['準備好出發了嗎？✈️',e?'你已經探索了 '+e+' 個地方':'第一站會是哪裡呢？','今天想去哪個國家看看？'];}
+ if(tab=='shelf'){
+  var r=S.books.filter(function(b){return b.status=='reading'}).length,d=S.books.filter(function(b){return b.status=='done'}).length;
+  return [r?'目前有 '+r+' 本書陪著你 📖':'第一本書在等你喔 📖',d?'已經讀完 '+d+' 本了，真了不起':'讀完的書會收在這裡','翻幾頁也很好，慢慢讀就好'];}
+ return [hi];
+}
+
+function toast(n){
+ var msg;
+ if(n==2)msg='💌 話語解鎖了！';else if(n==3)msg='🌍 世界解鎖了！';else if(n==7)msg='🎉 七項全部完成！';
+ else{var c=['🌸 太棒了！','✨ 又完成一項！','💗 做得好！','🎈 今天好認真！'];msg=c[Math.floor(Math.random()*c.length)]}
+ var t=document.createElement('div');t.className='bd-toast';t.textContent=msg+' 目前 '+n+' / 7';
+ document.body.appendChild(t);
+ setTimeout(function(){t.style.opacity='0'},1600);setTimeout(function(){t.remove()},2100);
+}
+
+var TIPS={
+ exercise:{n:['動一動，讓身體也開心一下 🧘🏻‍♀️','伸展五分鐘也算數喔','今天想瑜珈還是跳舞呢？'],d:['身體謝謝你 💗','汗水是最棒的小花肥料 🌱','今天的你，輕盈又有力量']},
+ english:{n:['每天一點點，英文就會慢慢開花 📖','今天學一個新單字也很棒','開口說一句英文吧'],d:['Great job! 又前進一步了 ✨','Nice work today 🌟','Well done! 英文也在發芽 🌱']},
+ japanese:{n:['今日も少しだけ、がんばろう 🍡','學一句日文，今天就有收穫','五十音也是一種可愛的小圖案'],d:['おつかれさま！今天也很棒 🍡','一步一步，日文也在發芽 🌱','よくがんばったね 💗']},
+ sleep:{n:['睡得好，一天的心情都會變好 🌙','記一下昨晚睡得怎麼樣吧','睡眠是最溫柔的充電'],d:['謝謝你照顧自己的睡眠 💤','好好睡覺是最溫柔的事','記下來了，身體會知道你在乎它']},
+ taxi:{n:['今天用走的或搭捷運怎麼樣？🚶','少坐一趟，地球也會說謝謝 🌍','走一小段路，順便看看風景'],d:['今天靠自己的腳步出門，好棒 👟','省下的車資，可以買顆小甜點 🍰','地球和荷包都在偷偷開心 ✨']},
+ tea:{n:['今天用白開水犒賞自己吧 💧','忍住的這一杯，是給未來的自己 ✨','想喝的時候，先深呼吸三次'],d:['成功忍住了！你好有毅力 🎉','今天的你，比昨天更自律一點 💪','給自己一個大大的讚 👍']},
+ book:{n:['翻開幾頁就好，不用讀很多 📖','睡前讀一點，夢也會變溫柔','今天想陪哪一本書呢？'],d:['今天也和書本見面了 📚','文字陪著你，真好 💗','讀書的你，閃閃發亮 ✨']}
+};
+function pick(arr,seed){var h=0;for(var i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))%9973;return arr[h%arr.length]}
+
+var off=0,lastTab=null,lastN=null,_r=render;
+render=function(){
+ var n=count();
+ if(lastTab=='today'&&tab=='today'&&lastN!==null&&n>lastN)toast(n);
+ if(tab!==lastTab)off=Math.floor(Math.random()*3);
+ lastTab=tab;lastN=n;
+ _r();
+ var h2=document.querySelector('#app h2');
+ if(h2){var L=lines();h2.insertAdjacentHTML('afterend','<div class="bd-hi" data-a="hi">'+L[off%L.length]+'</div>')}
+ if(tab=='today'){
+  var cards=document.querySelectorAll('#app .card'),rec=rd();
+  HABITS.forEach(function(h,i){
+   var card=cards[i+1];if(!card)return;
+   var row=card.querySelector('.row'),t=TIPS[h.id];if(!row||!t)return;
+   var arr=rec[h.id]?t.d:t.n;
+   row.insertAdjacentHTML('afterend','<div class="bd-tip">'+pick(arr,key()+h.id+(rec[h.id]?'d':'n'))+'</div>');
+  });
+ }
+};
+
+window.addEventListener('click',function(e){
+ var el=e.target.closest&&e.target.closest('[data-a="hi"]');if(!el)return;
+ e.stopPropagation();off++;var L=lines();
+ el.textContent=L[off%L.length];el.classList.remove('w');void el.offsetWidth;el.classList.add('w');
+},true);
+
+render();
+})();
+
+</script></body></html>
