@@ -1,0 +1,75 @@
+.weekly-stats .stats-period {
+ margin: 0 0 16px;
+ color: #6d617e;
+ text-align: center;
+ font-size: 15px;
+}
+
+.weekly-stats .stats-metric,
+.weekly-stats .stats-rhythm,
+.weekly-stats .stats-backup {
+ padding: 13px 15px;
+ margin-bottom: 10px;
+ border-color: #fffcff;
+ background: #fffcff;
+}
+
+.stats-metric {
+ display: grid;
+ grid-template-columns: minmax(0, 1fr) auto;
+ column-gap: 8px;
+ row-gap: 3px;
+ align-items: baseline;
+}
+
+.stats-metric-label {
+ color: #6d617e;
+ font-size: 14px;
+}
+
+.stats-value {
+ color: #4b3e61;
+ font-size: clamp(17px, 5vw, 22px);
+ text-align: right;
+}
+
+.stats-note {
+ color: #6d617e;
+ font-size: 13px;
+ line-height: 1.5;
+}
+
+.stats-metric .stats-note { grid-column: 1 / -1; }
+.stats-rhythm h3 { margin: 0; font-size: 19px; }
+.stats-rhythm p { margin: 3px 0 10px; }
+.stats-rhythm table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.stats-rhythm table th:first-child,
+.stats-rhythm table td:first-child { width: 31%; text-align: left; }
+.stats-rhythm th, .stats-rhythm td {
+ height: 32px;
+ padding: 0;
+ text-align: center;
+ font-size: 13px;
+ font-weight: 400;
+}
+.stats-rhythm thead th { color: #6d617e; }
+.stats-dot {
+ display: inline-block;
+ width: 10px;
+ height: 10px;
+ border-radius: 50%;
+ background: #e7e0ed;
+ vertical-align: middle;
+}
+.stats-dot-done { background: #e99b85; }
+.stats-dot-future { border: 1px solid #cbbdd6; background: transparent; }
+.stats-legend {
+ display: flex;
+ flex-wrap: wrap;
+ gap: 6px 13px;
+ margin-top: 10px;
+ color: #6d617e;
+ font-size: 12px;
+}
+.stats-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.stats-backup summary { color: #6d617e; font-size: 14px; cursor: pointer; }
