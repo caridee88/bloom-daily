@@ -40,11 +40,13 @@ nav button.on::after{content:"";display:block;width:6px;height:6px;border-radius
 /* 小卡商店 */
 </style>
 <link rel="stylesheet" href="./card-shop/shop.css">
+<link rel="stylesheet" href="./stats/stats.css">
 </head><body>
 <div id="app"></div>
 <nav><div id="nav"></div></nav>
 <script src="./card-shop/cards.js"></script>
 <script src="./card-shop/shop.js"></script>
+<script src="./stats/stats.js"></script>
 <script>
 window.onerror=function(m,s,l){document.getElementById('app').innerHTML='<pre style="padding:20px;white-space:pre-wrap;color:red">錯誤：'+m+' (行 '+l+')</pre>'};
 const HABITS=[
@@ -147,27 +149,12 @@ function saveHabit(id){
  wr()[id]=d;save();open=null;render();
 }
 
-/* ---------- 統計 ---------- */
-function lastDays(n){const a=[];for(let i=n-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);a.push(key(d))}return a}
-function chart(n){
- const ds=lastDays(n),w=360,h=120,bw=w/n;
- let bars='';
- ds.forEach((k,i)=>{const c=count(k),bh=c/7*h;
-  bars+='<rect x="'+(i*bw+1)+'" y="'+(h-bh)+'" width="'+(bw-2)+'" height="'+Math.max(bh,2)+'" rx="3" fill="'+(c?'#f7b7a3':'#dcecf7')+'"/>';});
- return '<svg viewBox="0 0 '+w+' '+(h+14)+'" width="100%">'+bars
- +'<text x="0" y="'+(h+12)+'" font-size="9" fill="#999">'+ds[0].slice(5)+'</text><text x="'+w+'" y="'+(h+12)+'" font-size="9" fill="#999" text-anchor="end">'+ds[n-1].slice(5)+'</text></svg><div class="sm c">空白淡藍＝未記錄／0</div>';
-}
+/* ---------- 統計頁入口 ---------- */
 function vStats(){
- const d30=lastDays(30);
- const per=HABITS.map(h=>{
-  const dd=d30.filter(k=>rd(k)[h.id]);let extra='';
-  if(['exercise','english','japanese'].includes(h.id))extra=' · '+dd.reduce((a,k)=>a+(rd(k)[h.id].min||0),0)+' 分鐘';
-  return '<div class="row"><span>'+h.e+' '+h.n+'</span><span>'+dd.length+'/30 天 ('+Math.round(dd.length/30*100)+'%)'+extra+'</span></div>';}).join('');
- return '<h2>統計</h2><div class="card c"><h3>今日 '+count()+' / 7　·　'+Math.round(count()/7*100)+'%</h3>今日喵幣：'+xp()+'</div>'
- +'<div class="card"><b>近 7 天</b>'+chart(7)+'</div><div class="card"><b>近 30 天</b>'+chart(30)+'</div>'
- +'<div class="card"><b>各習慣（近 30 天）</b>'+per+'<div class="sm">書櫃：閱讀中 '+S.books.filter(b=>b.status=='reading').length+' 本 · 已讀完 '+S.books.filter(b=>b.status=='done').length+' 本</div></div>'
- +'<div class="card c"><b>備份</b><p class="sm">清除 Safari 網站資料會遺失紀錄，建議定期匯出。</p>'
- +'<button data-a="export">匯出備份</button> <button data-a="import">還原備份</button><input id="imp" type="file" accept=".json" style="display:none"></div>';
+ if(typeof bloomStats==='undefined'){
+  return '<h2>統計</h2><div class="card c">統計頁暫時無法載入。請確認 stats/stats.js 已上傳，再重新整理。</div>';
+ }
+ return bloomStats.render({days:S.days, habits:HABITS, dateKey:key, escape:esc});
 }
 
 /* ---------- 話語 ---------- */
@@ -477,7 +464,7 @@ render=function(){
  lastTab=tab;lastN=n;
  _r();
  var h2=document.querySelector('#app h2');
- if(h2){var L=lines();h2.insertAdjacentHTML('afterend','<div class="bd-hi" data-a="hi">'+L[off%L.length]+'</div>')}
+ if(h2&&tab!=='stats'){var L=lines();h2.insertAdjacentHTML('afterend','<div class="bd-hi" data-a="hi">'+L[off%L.length]+'</div>')}
  if(tab=='today'){
   var cards=document.querySelectorAll('#app .card'),rec=rd();
   HABITS.forEach(function(h,i){
